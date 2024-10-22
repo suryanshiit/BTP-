@@ -1,0 +1,6 @@
+<TinyGsmClient.h>
+<PubSubClient.h>
+<WiFi.h>
+<AsyncTCP.h>
+<ESPAsyncWebServer.h>
+<Adafruit_ADS1X15.h>
