@@ -1,0 +1,91 @@
+The workflow of the code can be broken down into several key steps, each managing different functionalities of the ESP32 and the connected components (GSM module, MQTT, ADS1115, WebServer). Here's a step-by-step explanation of how the code operates:
+
+1. Preprocessor Setup and Global Variable Initialization
+Libraries Imported: The necessary libraries for GSM, MQTT, Wi-Fi, ADS1115, and Async WebServer are included.
+Hardware Pin Definitions:
+RXD2, TXD2, and powerPin are defined to manage the hardware connections for the SIM7600 modem and power control.
+Global Variables:
+Variables like ch0, ch1, etc., are defined to hold sensor values from the ADS1115 ADC.
+Topics for MQTT (publishTopic, subscribeTopic) and APN for LTE/GPRS connection are declared.
+interval controls how often data is published to the MQTT broker.
+2. setup() Function
+This function sets up the environment, including initializing the GSM modem, the MQTT client, the ADS1115 ADC, and the Async Web Server.
+
+Steps in setup():
+
+Serial Communication:
+
+The Serial monitor (SerialMon) is initialized for debugging, and SerialAT is initialized for communication with the modem via Serial1.
+Modem Initialization:
+
+The GSM module (SIM7600) is powered on using the powerPin.
+modem.init() and modem.restart() are called to initialize and restart the GSM modem.
+The modem connects to the network (modem.waitForNetwork()), and GPRS is activated (modem.gprsConnect(apn)).
+ADS1115 Initialization:
+
+The ADS1115 ADC is initialized to read analog sensor data. If initialization fails, it logs an error.
+MQTT Setup:
+
+The MQTT broker is defined and a callback function for receiving messages is set via mqtt.setCallback().
+An attempt is made to connect to the MQTT broker (connectToMQTT()), and upon success, the ESP32 subscribes to the subscribeTopic.
+Async WebServer:
+
+The web server is initialized with startWebServer(), serving pages for sensor readings and status updates.
+3. Main loop() Function
+The main loop performs three key tasks:
+
+Steps in loop():
+
+MQTT Connection Handling:
+
+The ESP32 checks if the MQTT connection is still active. If disconnected, it attempts to reconnect and re-subscribes to the subscribeTopic.
+Publishing Sensor Data:
+
+The loop checks if the interval time has passed. If so, it reads the sensor values from the ADS1115, prints them, and publishes them to the publishTopic via MQTT.
+A try-catch block is used to handle any errors while reading from ADS1115.
+Web Server Timeout:
+
+If the web server has been running longer than serverTimeout, the stopWebServer() function is called to shut it down.
+4. connectToMQTT() Function
+This function attempts to establish a connection to the MQTT broker.
+
+Steps in connectToMQTT():
+
+The function checks if the ESP32 can connect to the broker. If successful, it returns true and subscribes to the desired topic. Otherwise, it logs the failure and returns false.
+5. callback() Function
+This function handles messages received on subscribed MQTT topics.
+
+Steps in callback():
+
+The ESP32 checks if the message came from the subscribeTopic. If so, it reads the message (interpreted as a time value), converts it to an integer, and adjusts the interval for data publishing accordingly.
+6. startWebServer() Function
+This function sets up the ESP32 as a web server using the Async WebServer library.
+
+Steps in startWebServer():
+
+The ESP32 is set up as an access point (AP mode) with WiFi.softAP("ESP32_AP").
+Various routes are defined to serve HTTP GET requests:
+/: Serves a welcome message.
+/readings: Serves sensor readings in JSON format.
+/params: Serves a status page showing the status of the network, MQTT, ADS1115, and sensor values.
+The web server is started via server.begin().
+7. stopWebServer() Function
+This function stops the Async WebServer and disconnects the ESP32 from the access point.
+
+Steps in stopWebServer():
+
+The web server is stopped with server.end().
+The ESP32 disconnects from the Wi-Fi AP using WiFi.softAPdisconnect(true).
+8. getSignalStrength() Function
+This function reads and returns the network signal strength from the modem.
+
+Steps in getSignalStrength():
+
+It calls modem.getSignalQuality() to retrieve the network signal strength (used mainly for debugging).
+Workflow Overview
+Initialization: Upon startup, the ESP32 powers the SIM7600 modem, connects to the LTE/GPRS network, and initializes the ADS1115 ADC and MQTT client.
+Web Server: The ESP32 sets up an access point and web server, allowing users to interact via HTTP requests and view sensor data and device status.
+MQTT Communication: The ESP32 connects to an MQTT broker, subscribes to topics, publishes sensor readings, and listens for time-based updates to control the data publishing interval.
+Sensor Data Acquisition: Every interval milliseconds, the ESP32 reads sensor values from the ADS1115 and publishes them to the MQTT broker.
+Web Server Timeout: The web server shuts down after running for a certain period (defined by serverTimeout).
+This workflow allows the ESP32 to act as a sensor data collector and server, handling MQTT communication for real-time data exchange and offering a web interface for status monitoring.
